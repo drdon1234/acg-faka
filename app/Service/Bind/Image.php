@@ -205,6 +205,15 @@ class Image implements \App\Service\Image
         $cache = $this->upload->get($hash);
 
         if ($cache) {
+            if (!is_file(BASE_PATH . $cache)) {
+                // 数据库中已有该图片记录但文件已缺失：保留新文件并更新所有引用
+                $this->upload->updatePathReferences($cache, $unique);
+                if ($isCreateThumbnail) {
+                    $thumbUrl = $this->createThumbnail($unique, 128);
+                    return [$unique, $thumbUrl ?: $unique];
+                }
+                return [$unique];
+            }
             if ($isCreateThumbnail) {
                 $baseImagePathInfo = pathinfo($cache);
                 $thumbPath = $baseImagePathInfo['dirname'] . '/thumb/' . $baseImagePathInfo['basename'];

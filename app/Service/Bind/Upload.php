@@ -4,6 +4,13 @@ declare(strict_types=1);
 namespace App\Service\Bind;
 
 
+use App\Model\BusinessLevel;
+use App\Model\Category;
+use App\Model\Commodity;
+use App\Model\Config as CFG;
+use App\Model\Manage as ManageModel;
+use App\Model\Pay;
+use App\Model\User;
 use Kernel\Util\Date;
 use Kernel\Util\File;
 
@@ -53,6 +60,26 @@ class Upload implements \App\Service\Upload
         $hash = md5_file(BASE_PATH . $path);
         \App\Model\Upload::query()->where("hash", $hash)->delete(); //删除数据库
         File::remove(BASE_PATH . $path);
+    }
+
+    /**
+     * 将数据库中引用旧路径的地方全部更新为新路径（用于原文件已缺失时修复引用）
+     */
+    public function updatePathReferences(string $oldPath, string $newPath): void
+    {
+        \App\Model\Upload::query()->where('path', $oldPath)->update(['path' => $newPath]);
+        Category::query()->where('icon', $oldPath)->update(['icon' => $newPath]);
+        Commodity::query()->where('cover', $oldPath)->update(['cover' => $newPath]);
+        Pay::query()->where('icon', $oldPath)->update(['icon' => $newPath]);
+        BusinessLevel::query()->where('icon', $oldPath)->update(['icon' => $newPath]);
+        User::query()->where('avatar', $oldPath)->update(['avatar' => $newPath]);
+        ManageModel::query()->where('avatar', $oldPath)->update(['avatar' => $newPath]);
+        if ((string)CFG::get('background_url') === $oldPath) {
+            CFG::put('background_url', $newPath);
+        }
+        if ((string)CFG::get('background_mobile_url') === $oldPath) {
+            CFG::put('background_mobile_url', $newPath);
+        }
     }
 
     public function handle($upload, $dir, $type, int $size = 10000, string $fileName = ''): mixed

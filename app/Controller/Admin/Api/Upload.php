@@ -57,8 +57,13 @@ class Upload extends Manage
         $fileName = $static_path . $handle['new_name'];
 
         if ($tmp = $this->upload->get(md5_file(BASE_PATH . $fileName))) {
-            File::remove(BASE_PATH . $fileName);
-            $fileName = $tmp;
+            if (is_file(BASE_PATH . $tmp)) {
+                File::remove(BASE_PATH . $fileName);
+                $fileName = $tmp;
+            } else {
+                // 数据库中已有该图片记录但文件已缺失：保留新文件并更新所有引用
+                $this->upload->updatePathReferences($tmp, $fileName);
+            }
         } else {
             $this->upload->add($fileName, $type);
         }

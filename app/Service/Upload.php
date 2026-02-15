@@ -40,4 +40,12 @@ interface Upload
      * @return void
      */
     public function remove(string $path): void;
+
+    /**
+     * 将数据库中引用旧路径的地方全部更新为新路径（用于原文件已缺失时修复引用）
+     * @param string $oldPath
+     * @param string $newPath
+     * @return void
+     */
+    public function updatePathReferences(string $oldPath, string $newPath): void;
 }

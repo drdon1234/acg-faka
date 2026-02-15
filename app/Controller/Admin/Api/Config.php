@@ -7,8 +7,15 @@ use App\Controller\Base\API\Manage;
 use App\Entity\Query\Get;
 use App\Interceptor\ManageSession;
 use App\Model\Business;
+use App\Model\BusinessLevel;
+use App\Model\Category;
+use App\Model\Commodity;
 use App\Model\Config as CFG;
+use App\Model\Manage as ManageModel;
 use App\Model\ManageLog;
+use App\Model\Pay;
+use App\Model\Upload as UploadModel;
+use App\Model\User;
 use App\Service\Email;
 use App\Service\Query;
 use App\Service\Sms;
@@ -52,7 +59,21 @@ class Config extends Manage
         $file = $post['logo'];
         if ($file != '/favicon.ico') {
             @copy(BASE_PATH . $file, BASE_PATH . '/favicon.ico');
-            @unlink(BASE_PATH . $file);
+            // 若该图片已被任意处引用，则不删除源文件，避免引用失效
+            $existsInUpload = UploadModel::query()->where('path', $file)->exists();
+            $existsAsIconOrCover = Category::query()->where('icon', $file)->exists()
+                || Commodity::query()->where('cover', $file)->exists()
+                || Pay::query()->where('icon', $file)->exists()
+                || BusinessLevel::query()->where('icon', $file)->exists();
+            $usedAsBackground = ($post['background_url'] ?? '') === $file
+                || ($post['background_mobile_url'] ?? '') === $file
+                || (string)CFG::get('background_url') === $file
+                || (string)CFG::get('background_mobile_url') === $file;
+            $existsAsAvatar = User::query()->where('avatar', $file)->exists()
+                || ManageModel::query()->where('avatar', $file)->exists();
+            if (!$existsInUpload && !$existsAsIconOrCover && !$usedAsBackground && !$existsAsAvatar) {
+                @unlink(BASE_PATH . $file);
+            }
         }
         try {
             if (isset($post['ip_get_mode'])) {
